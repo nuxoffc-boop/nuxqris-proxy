@@ -1,33 +1,28 @@
-const express = require('express');
-const request = require('request');
-require('dotenv').config(); // Optional, hanya untuk lokal testing
-const app = express();
+// api/qris.js
+import fetch from 'node-fetch';
 
-app.use(express.json());
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
-const API_KEY = process.env.API_KEY; // Akan diambil dari Vercel Environment Variable
+  const { project, order_id, amount } = req.body;
+  const API_KEY = process.env.API_KEY;
 
-app.post('/qris', (req, res) => {
-    const { project, order_id, amount } = req.body;
+  if (!API_KEY) {
+    return res.status(500).json({ error: 'API_KEY not set in environment variables' });
+  }
 
-    const options = {
-        url: 'https://app.pakasir.com/api/transactioncreate/qris',
-        method: 'POST',
-        json: {
-            project,
-            order_id,
-            amount,
-            api_key: API_KEY
-        }
-    };
-
-    request(options, (error, response, body) => {
-        if (error) return res.status(500).json({ error: error.message });
-        res.json(body);
+  try {
+    const response = await fetch('https://app.pakasir.com/api/transactioncreate/qris', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project, order_id, amount, api_key: API_KEY })
     });
-});
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Proxy running on port ${PORT}`));
-
-ng on port ${PORT}`));
+    const data = await response.json();
+    res.status(200).json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
